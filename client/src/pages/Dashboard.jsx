@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import UploadModal from '../components/UploadModal';
 import Modal from '../components/ui/Modal';
 import TextAnalyzer from '../components/ui/TextAnalyzer';
-import { FileText, Plus, LogOut, Clock, CheckCircle, AlertCircle, Loader, Trash2, Type, Lock } from 'lucide-react';
+import { FileText, Plus, LogOut, Clock, CheckCircle, AlertCircle, Loader, Trash2, Type, Lock, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Dashboard = () => {
@@ -44,6 +44,11 @@ const Dashboard = () => {
             setUsageCount(newCount);
             localStorage.setItem('usageCount', newCount.toString());
         }
+    };
+
+    const resetUsage = () => {
+        setUsageCount(0);
+        localStorage.setItem('usageCount', '0');
     };
 
     const fetchDocuments = async () => {
@@ -161,6 +166,13 @@ const Dashboard = () => {
                                 <div className="text-xs sm:text-sm text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
                                     <span className="text-primary-600 font-bold">{usageCount}/{MAX_FREE_USAGE}</span>
                                     <span className="hidden sm:inline ml-1">essais gratuits</span>
+                                    <button
+                                        onClick={resetUsage}
+                                        className="ml-2 p-1 hover:bg-gray-200 rounded-full transition-colors"
+                                        title="Réinitialiser les essais"
+                                    >
+                                        <RotateCcw className="w-3 h-3 text-gray-500" />
+                                    </button>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Link to="/login" className="btn-secondary px-3 py-1.5 text-xs sm:text-sm">
