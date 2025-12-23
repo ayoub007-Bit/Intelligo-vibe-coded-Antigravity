@@ -1,18 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const Document = require('../models/Document');
 const { extractText } = require('../services/ocrService');
 const { analyzeDocument, rewriteText } = require('../services/llmService');
 
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', auth, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
         const newDoc = new Document({
             filename: req.file.filename,
             originalName: req.file.originalname,
             mimeType: req.file.mimetype,
-            path: req.file.path
+            path: req.file.path,
+            userId: req.user ? req.user.id : null
         });
         await newDoc.save();
         res.json(newDoc);
@@ -50,9 +52,14 @@ router.post('/:id/process', async (req, res) => {
     }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', auth, async (req, res) => {
     try {
-        const docs = await Document.find().sort({ createdAt: -1 });
+        // If user is authenticated, return their documents
+        // If guest, return empty list (or handle as needed)
+        if (!req.user) {
+            return res.json([]);
+        }
+        const docs = await Document.find({ userId: req.user.id }).sort({ createdAt: -1 });
         res.json(docs);
     } catch (err) {
         console.error(err);
@@ -60,10 +67,16 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
     try {
         const doc = await Document.findById(req.params.id);
         if (!doc) return res.status(404).json({ message: 'Document not found' });
+
+        // Check ownership if document has a userId
+        if (doc.userId && (!req.user || doc.userId.toString() !== req.user.id)) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
         res.json(doc);
     } catch (err) {
         console.error(err);
@@ -114,7 +127,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST - Analyser du texte copié-collé directement (sans fichier)
-router.post('/analyze-text', async (req, res) => {
+router.post('/analyze-text', auth, async (req, res) => {
     try {
         const { text, title } = req.body;
 
@@ -129,7 +142,8 @@ router.post('/analyze-text', async (req, res) => {
             mimeType: 'text/plain',
             path: null, // Pas de fichier physique
             extractedText: text,
-            status: 'processing'
+            status: 'processing',
+            userId: req.user ? req.user.id : null
         });
 
         await newDoc.save();
